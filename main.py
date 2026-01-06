@@ -187,7 +187,8 @@ def get_image_paths(input_dir: Path, recursive: bool = False) -> List[Path]:
 
 def main():
     parser = argparse.ArgumentParser(description="Auto Photo Cluster: Smartly organize your photos.")
-    parser.add_argument('input_dir', nargs='?', default='.', help="Directory containing images to cluster")
+    parser.add_argument('--input-dir', help="Directory containing images to cluster")
+    parser.add_argument('input_dir_pos', nargs='?', default='.', help="Directory containing images to cluster (positional)")
     parser.add_argument('--output-dir', default='clustered_output', help="Directory to save clustered folders")
     parser.add_argument('--max-size', type=int, default=50, help="Maximum number of images per folder")
     parser.add_argument('--ideal-size', type=int, default=30, help="Ideal target number of images per folder")
@@ -198,7 +199,9 @@ def main():
     
     args = parser.parse_args()
     
-    input_path = Path(args.input_dir).resolve()
+    # Determine input directory: --input-dir takes precedence over positional argument
+    input_dir_str = args.input_dir if args.input_dir else args.input_dir_pos
+    input_path = Path(input_dir_str).resolve()
     output_path = Path(args.output_dir).resolve()
     
     if not input_path.exists():
