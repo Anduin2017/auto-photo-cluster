@@ -51,6 +51,7 @@ python main.py --max-size 200 --ideal-size 100
 ```
 
 ### Other Options
+- `--recursive`: Recursively search for images in subdirectories of the input directory.
 - `--move`: **Move** files instead of copying them (Use with caution!).
 - `--no-cache`: Force re-extraction of features.
 

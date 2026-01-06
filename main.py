@@ -172,12 +172,16 @@ class RecursiveClusterer:
             self.global_labels[idx] = cluster_id
 
 
-def get_image_paths(input_dir: Path) -> List[Path]:
+def get_image_paths(input_dir: Path, recursive: bool = False) -> List[Path]:
     extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
     files = []
     for ext in extensions:
-        files.extend(input_dir.glob(f"*{ext}"))
-        files.extend(input_dir.glob(f"*{ext.upper()}"))
+        if recursive:
+            files.extend(input_dir.rglob(f"*{ext}"))
+            files.extend(input_dir.rglob(f"*{ext.upper()}"))
+        else:
+            files.extend(input_dir.glob(f"*{ext}"))
+            files.extend(input_dir.glob(f"*{ext.upper()}"))
     return sorted(list(set(files)))
 
 
@@ -190,6 +194,7 @@ def main():
     parser.add_argument('--move', action='store_true', help="Move files instead of copying (WARNING: modifies source)")
     parser.add_argument('--no-cache', action='store_true', help="Ignore cached features and re-compute")
     parser.add_argument('--batch-size', type=int, default=32, help="Inference batch size")
+    parser.add_argument('--recursive', action='store_true', help="Recursively search for images in subdirectories")
     
     args = parser.parse_args()
     
@@ -201,7 +206,7 @@ def main():
         return
 
     # 1. Gather files
-    image_paths = get_image_paths(input_path)
+    image_paths = get_image_paths(input_path, args.recursive)
     # Ignore images already in output dir if input is parent
     image_paths = [p for p in image_paths if output_path not in p.parents]
     
@@ -221,7 +226,7 @@ def main():
         try:
             data = np.load(cache_file, allow_pickle=True)
             cached_names = set(data['names'])
-            current_names = set(p.name for p in image_paths)
+            current_names = set(str(p.relative_to(input_path)) for p in image_paths)
             
             # Simple consistency check
             # If cache has subset or superset, we might want to recompute or align
@@ -230,7 +235,7 @@ def main():
                 features = data['features']
                 # Reconstruct path objects 
                 # (Assuming filenames are unique enough or flat directory)
-                name_to_path = {p.name: p for p in image_paths}
+                name_to_path = {str(p.relative_to(input_path)): p for p in image_paths}
                 valid_paths = [name_to_path[n] for n in data['names']]
                 logger.info("Cache loaded successfully.")
             else:
@@ -243,7 +248,7 @@ def main():
         features, valid_paths = extractor.extract_features(image_paths, batch_size=args.batch_size)
         
         # Save cache
-        names = [p.name for p in valid_paths]
+        names = [str(p.relative_to(input_path)) for p in valid_paths]
         np.savez(cache_file, features=features, names=names)
         logger.info(f"Features cached to {cache_file}")
 
