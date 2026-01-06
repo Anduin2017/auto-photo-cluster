@@ -217,14 +217,24 @@ def main():
     logger.info(f"Found {len(image_paths)} images.")
 
     # 2. Extract Features (with caching)
-    cache_file = input_path / "features_cache.npz"
+    input_cache_file = input_path / "features_cache.npz"
+    output_cache_file = output_path / "features_cache.npz"
+    
     features = None
     valid_paths = None
+
+    # Determine which cache file to try loading
+    cache_to_load = None
+    if not args.no_cache:
+        if input_cache_file.exists():
+            cache_to_load = input_cache_file
+        elif output_cache_file.exists():
+            cache_to_load = output_cache_file
     
-    if not args.no_cache and cache_file.exists():
-        logger.info(f"Found cache: {cache_file}")
+    if cache_to_load:
+        logger.info(f"Found cache: {cache_to_load}")
         try:
-            data = np.load(cache_file, allow_pickle=True)
+            data = np.load(cache_to_load, allow_pickle=True)
             cached_names = set(data['names'])
             current_names = set(str(p.relative_to(input_path)) for p in image_paths)
             
@@ -249,8 +259,21 @@ def main():
         
         # Save cache
         names = [str(p.relative_to(input_path)) for p in valid_paths]
-        np.savez(cache_file, features=features, names=names)
-        logger.info(f"Features cached to {cache_file}")
+        
+        # Try saving to input directory first, then output directory
+        try:
+            np.savez(input_cache_file, features=features, names=names)
+            logger.info(f"Features cached to {input_cache_file}")
+        except PermissionError:
+            logger.warning(f"Permission denied saving to {input_cache_file}. Attempting to save to output directory.")
+            try:
+                output_path.mkdir(parents=True, exist_ok=True)
+                np.savez(output_cache_file, features=features, names=names)
+                logger.info(f"Features cached to {output_cache_file}")
+            except Exception as e:
+                logger.warning(f"Failed to save cache to output directory: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to save cache: {e}")
 
     if len(features) == 0:
         logger.error("No features extracted. Exiting.")
