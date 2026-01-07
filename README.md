@@ -12,7 +12,20 @@
 ## Installation
 
 1. Clone or download this repository.
-2. Install dependencies:
+2. Create and activate a virtual environment (Recommended):
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate it
+# On Linux/macOS:
+source venv/bin/activate
+# On Windows:
+.\venv\Scripts\activate
+```
+
+3. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
